@@ -30,7 +30,8 @@ The platform ingests, optimizes, and analyzes **4 full years (2022–2025) of U.
 | :--- | :--- | :--- |
 | **[`PROJECT_EXPLAINED_EN.md`](./PROJECT_EXPLAINED_EN.md)** | English | Complete, from-scratch explanation of Big Data, the kitchen analogy, and every project tool. |
 | **[`PROJECT_EXPLAINED_AR.md`](./PROJECT_EXPLAINED_AR.md)** | Egyptian Arabic | الدليل الشامل والمبسط من الصفر بالعامية المصرية لشرح المشروع والتيم. |
-| **[`DOCKER_CONTAINERS_GUIDE.md`](./DOCKER_CONTAINERS_GUIDE.md)** | Arabic / English | دليل الحاويات ودوكر وسيناريو العرض العملي خطوة بخطوة أمام المشرف. |
+| **[`DOCKER_CONTAINERS_GUIDE.md`](./DOCKER_CONTAINERS_GUIDE.md)** | English | Comprehensive guide to Docker containers & step-by-step live demo script. |
+| **[`PROJECT_UPGRADE_PLAN.md`](./PROJECT_UPGRADE_PLAN.md)** | Technical Roadmap | 5 strategic upgrades aligned with instructor feedback for maximum defense score. |
 | **[`PROJECT_COMPLETION_PLAN.md`](./PROJECT_COMPLETION_PLAN.md)** | Technical Blueprint | 48-hour sprint schedule, table contracts, metric definitions, and presentation blueprint. |
 | **[`flight_airport_bigdata_project_context.md`](./flight_airport_bigdata_project_context.md)** | Specification | Architecture Decision Records (ADRs) and data schema definitions. |
 
@@ -71,7 +72,8 @@ BigDataFinalProject/
 ├── 04_Member4_BI_and_Deck.pdf         # Member 4 role brief: Power BI dashboard & 12-slide presentation
 ├── PROJECT_EXPLAINED_EN.md           # From-scratch project guide in plain English
 ├── PROJECT_EXPLAINED_AR.md           # الدليل المبسط الشامل بالعامية المصرية
-├── DOCKER_CONTAINERS_GUIDE.md        # دليل تشغيل دوكر وسيناريو الشرح العملي أمام المشرف
+├── DOCKER_CONTAINERS_GUIDE.md        # Comprehensive Docker guide & live instructor demo script
+├── PROJECT_UPGRADE_PLAN.md           # Strategic upgrades for full grade (MinIO, GBT, Kafka, Cluster)
 ├── README.md                          # Master GitHub overview
 │
 ├── airflow/
@@ -79,7 +81,7 @@ BigDataFinalProject/
 │       └── flight_pipeline_dag.py     # End-to-end Airflow DAG orchestration script
 │
 ├── docker/
-│   ├── docker-compose.yml            # Multi-container cluster configuration (8 services)
+│   ├── docker-compose.yml            # Multi-container cluster configuration (8+ services, MinIO, scaled workers)
 │   └── .env                           # Environment variables for Docker cluster
 │
 ├── scripts/
@@ -87,8 +89,9 @@ BigDataFinalProject/
 │   ├── 02_create_clickhouse_tables.py # ClickHouse table initialization script
 │   ├── 03_spark_csv_to_parquet.py     # PySpark batch ETL (CSV -> Clean Partitioned Parquet)
 │   ├── 04_spark_aggregates.py         # PySpark business aggregation engine (Tables 1-7)
-│   ├── 05_spark_delay_ml.py           # PySpark MLlib leak-free Logistic Regression classifier
-│   └── 06_load_to_clickhouse.py       # High-speed CSV bulk-loader into ClickHouse
+│   ├── 05_spark_delay_ml.py           # PySpark MLlib leak-free Logistic Regression & GBT comparison
+│   ├── 06_load_to_clickhouse.py       # High-speed CSV bulk-loader into ClickHouse
+│   └── 07_kafka_flight_producer.py    # Real-time Kafka flight event stream producer
 │
 ├── sql/
 │   └── clickhouse_ddl.sql             # SQL DDL for all 8 analytical tables + connectivity test
@@ -122,22 +125,24 @@ BigDataFinalProject/
 - Docker Desktop with WSL2 backend enabled.
 - Python 3.9+ (optional for local helper scripts).
 
-### 2. Start the Cluster
+### 2. Start the Cluster (with Multi-Worker Spark)
 ```powershell
 cd docker
-docker compose up -d
+# Start full cluster with 2 distributed Spark workers:
+docker compose up --scale spark-worker=2 -d
 ```
 
 ### 3. Verify Containers
 ```powershell
-docker ps
+docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 ```
 
 ### 4. Access Web Interfaces
 - **HDFS NameNode UI:** [http://localhost:9870](http://localhost:9870)
-- **Spark Master UI:** [http://localhost:8080](http://localhost:8080)
+- **Spark Master UI:** [http://localhost:8080](http://localhost:8080) *(Shows 2 active workers!)*
 - **ClickHouse HTTP:** [http://localhost:8123/play](http://localhost:8123/play)
 - **Kafka Web UI:** [http://localhost:8090](http://localhost:8090)
+- **MinIO Console UI:** [http://localhost:9001](http://localhost:9001) *(User/Pass: minioadmin / minioadmin)*
 
 ---
 

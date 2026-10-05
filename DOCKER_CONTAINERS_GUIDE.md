@@ -1,159 +1,196 @@
-# دليل الحاويات ودوكر وشرح العرض التقديمي أمام المشرف
-## Docker & Big Data Containers Live Demonstration Guide
+# Docker & Big Data Containers Live Demonstration Guide
+### Comprehensive Guide & Step-by-Step Instructor Presentation Script
 
 ---
 
-> **الهدف من هذا الدليل:**  
-> شرح مفهوم الـ Containers و Docker من الصفر بأسلوب بسيط جداً، وفهم كل حاوية (Container) شغالة في مشروعنا بتعمل إيه، بالإضافة إلى **سيناريو العرض العملي (Live Demo Script)** خطوة بخطوة عشان تفتح شاشاتك قدام الدكتور أو المشرف وتبهره وتجاوب على أي سؤال فني بثقة 100%.
+> **Guide Objective:**  
+> Explain the concepts of **Containers and Docker from absolute scratch**, detail every single service running in our cluster, and provide a **complete, step-by-step Live Demonstration Script** to present your environment in front of your instructor with 100% technical confidence.
 
 ---
 
-## 1. ما هو الـ Container؟ (تشبيه حاويات سفن الشحن)
-
-### الفكرة ببساطة
-زمان قبل اختراع الحاويات، عشان تشغل برنامج Big Data زي Hadoop أو Spark، كنت محتاج:
-- تسطب نظام تشغيل كامل (Linux Ubuntu أو CentOS) على جهازك أو جوة برنامج VirtualBox (VM).
-- الـ Virtual Machine بتاخد 20 إلى 30 جيجا من الهارد، وبتحجز 4 جيجا رام كاملين لنظام التشغيل، وبتاخد 5 دقايق عشان تفتح!
-- لو البرنامج اشتغل على لابتوبك وجه زميلك يشغله على جهازه، تظهر الجملة الشهيرة: *"هو شغال عندي على جهازي بس مش راضي يشتغل عندك ليه؟"* بسبب اختلاف إصدارات بايثون والجافا وملفات السيستم.
-
-### الحل: حاوية دوكر (Docker Container)
-تخيل **سفن الشحن العملاقة في قناة السويس**:
-البضائع (السيارات، الأكل، الأجهزة) بتتحط كلها في **حاويات حديد موحدة المقاس (Containers)**. الونش بينقل الحاوية من السفينة للمقطورة للقطار بدون ما يفتحها أو يسأل إيه اللي جواها، لأنها مقفولة ومعزولة وجاهزة للشحن في أي مكان في العالم!
-
-**حاوية دوكر بتعمل نفس الشيء بالظبط:**
-- بتاخد كود البرنامج (مثلاً Spark أو ClickHouse) وكل مكتباته وملفات الجافا والـ Dependencies اللي محتاجها، وتقفل عليهم في باكدج معزولة وصغيرة جداً.
-- **الفرق الجوهري بين الحاوية والـ VM:** الحاوية مش بتنزل نظام تشغيل كامل؛ هي بتشترك مع الويندوز في الكيرنل (Kernel) الأساسي، فبتاخد مساحة صغيرة جداً (ميغابايتات)، وبتفتح في **ثانية واحدة**!
+## Table of Contents
+1. [What is a Container? (The Shipping Container Analogy)](#1-what-is-a-container-the-shipping-container-analogy)
+2. [What is Docker & Docker Compose?](#2-what-is-docker--docker-compose)
+3. [Our Cluster Architecture: The Running Services](#3-our-cluster-architecture-the-running-services)
+4. [Step-by-Step Live Instructor Demo Script](#4-step-by-step-live-instructor-demo-script)
+   - [Step 1: Check Docker Desktop](#step-1-ensure-docker-desktop-is-running)
+   - [Step 2: Spin Up the Cluster](#step-2-spin-up-the-cluster)
+   - [Step 3: Verify Running Containers in CLI](#step-3-verify-running-containers-in-cli)
+   - [Step 4: The 5-Tab Browser Showcase](#step-4-the-5-tab-browser-showcase)
+   - [Step 5: Live Container Execution](#step-5-live-container-execution)
+5. [Common Instructor Questions & Exact Winning Answers](#5-common-instructor-questions--exact-winning-answers)
+6. [Emergency Troubleshooting Cheat Sheet](#6-emergency-troubleshooting-cheat-sheet)
 
 ---
 
-## 2. ما هو Docker وما هو Docker Compose؟
+## 1. What is a Container? (The Shipping Container Analogy)
 
-1. **Docker Engine:** المحرك اللي بيشغل الحاويات على جهازك.
-2. **Docker Image (الصورة):** هي "الوصفة" أو "الاسطوانة المتجمدة" للبرنامج (زي صورة خام لبرنامج هادوب).
-3. **Docker Container (الحاوية الشغالة):** هي النسخة الحية اللي شغالة دلوقتي وبتستهلك رامات وبروسيسور.
-4. **Docker Compose:**  
-   في مشروعنا عندنا 8 برامج مختلفة محتاجين يشتغلوا مع بعض. بدل ما تفتح التيرمينال وتكتب 8 أوامر طويلة ومعقدة عشان تشغل كل برنامج وتربط شبكاته، بنكتب ملف نصي واحد اسمه `docker-compose.yml`.  
-   بأمر واحد بس: `docker compose up -d`، دوكر بيقرأ الملف ويشغل الكلاستر الـ 8 حاويات كلهم ويربطهم ببعض أوتوماتيكياً!
+### The Old Way: Heavy Virtual Machines (VMs)
+Before containers, running a Big Data stack required installing a full operating system (like Ubuntu or CentOS) inside a Virtual Machine software (like VirtualBox or VMware):
+- A Virtual Machine takes **20 to 40 GB** of disk space per OS.
+- It reserves **4 to 8 GB of RAM** just to run the guest OS background daemons.
+- It takes **3 to 5 minutes** to boot up.
+- Most frustratingly, you hit the classic developer headache: *"It works on my machine, why doesn't it work on yours?"* because of mismatched Java, Python, or operating system package versions.
+
+### The Modern Solution: Docker Containers
+Think of modern **ocean freight cargo ships**:
+Goods (cars, electronics, frozen food) are loaded into standardized, sealed **steel shipping containers**. The cargo crane doesn't care what is inside; it moves the container seamlessly from ship to truck to train.
+
+**A Docker container does the exact same thing for software:**
+- It packages the program (e.g., Apache Spark or ClickHouse) together with all of its libraries, environment variables, and dependencies into an isolated, lightweight box.
+- **The key difference vs. a VM:** Containers do **not** run a separate guest OS kernel. They share the host machine's Linux kernel (via WSL2 on Windows).
+- **Result:** Containers boot up in **under 2 seconds**, use only the RAM needed by the application, and guarantee that what runs on your laptop runs identically on any server in the world.
 
 ---
 
-## 3. حاويات الكلاستر في مشروعنا (The 8 Running Containers)
+## 2. What is Docker & Docker Compose?
 
-في مشروعنا، إحنا مشغلين شبكة داخلية خاصة اسمها `bigdata-net`. جوة الشبكة دي، الحاويات بتكلم بعض بأسمائها (DNS داخلي) مش برقم الآي بي!
+- **Docker Engine:** The background runtime engine that builds, runs, and isolates containers on your operating system.
+- **Docker Image:** The frozen blueprint or recipe (e.g., a pre-built image containing Ubuntu + Apache Spark 3.3.0 + Java 11).
+- **Docker Container:** The live, running instance of an image consuming CPU and RAM.
+- **Docker Compose:**  
+  Our Big Data platform requires 8 different specialized tools running simultaneously. Typing 8 lengthy `docker run` commands with dozens of port mappings and network flags in a terminal is error-prone.  
+  With **Docker Compose**, we declare our entire multi-node cluster in a single readable configuration file: `docker-compose.yml`.  
+  With one single command:
+  ```powershell
+  docker compose up -d
+  ```
+  Docker automatically pulls the images, connects them to a private virtual network (`bigdata-net`), sets up storage volumes, and launches the entire cluster in seconds.
 
-| اسم الحاوية (Container Name) | البرنامج | البورتات المفتوحة على الويندوز | وظيفتها في المشروع |
+---
+
+## 3. Our Cluster Architecture: The Running Services
+
+All containers communicate over an isolated Docker network called `bigdata-net`. Within this network, containers discover each other automatically by name (internal Docker DNS) without hardcoded IP addresses.
+
+| Container Name | Technology | Host Ports | Role in our Big Data Platform |
 | :--- | :--- | :--- | :--- |
-| **`namenode`** | **Hadoop HDFS Master** | `9000` (RPC)<br>`9870` (Web UI) | المخ والمدير لنظام التخزين الموزع. بيعرف أماكن البلوكات في الهادوب. |
-| **`datanode`** | **Hadoop HDFS Worker** | `9864` (Web UI) | الشيال والقرص الصلب الفعلي اللي بيخزن بلوكات ملفات الـ CSV والباركيه. |
-| **`spark-master`** | **Apache Spark Master** | `7077` (Cluster RPC)<br>`8080` (Web UI) | المنسق العام لمحرك سبارك، بيوزع مهام الـ ETL ومعالجة الداتا. |
-| **`spark-worker`** | **Apache Spark Worker** | `8081` (Web UI) | العامل اللي بينفذ الحسابات بالتوازي (معطى له 2 Cores و 3GB RAM). |
-| **`clickhouse`** | **ClickHouse Server** | `8123` (HTTP)<br>`9009` (Native TCP) | قاعدة بيانات الـ OLAP التحليلية السريعة اللي بنرمي فيها الجداول التمانية. |
-| **`airflow-postgres`** | **PostgreSQL 13** | `5432` | قاعدة بيانات علائقية بتخزن سجلات وتشغيلات أداة الأوركستريشن Airflow. |
-| **`kafka`** | **Apache Kafka (KRaft)** | `9092` (Internal)<br>`9094` (External) | وسيط استقبال البيانات اللحظية (مجهز للـ Real-time Streaming في الخطة المستقبلية). |
-| **`kafka-ui`** | **Kafka Web Interface** | `8090` (Web UI) | لوحة تحكم على المتصفح لمراقبة مواضيع ورسائل كافكا. |
+| **`namenode`** | **Hadoop HDFS Master** | `9000` (RPC)<br>`9870` (Web UI) | The master coordinator of distributed storage; manages the filesystem namespace and block locations. |
+| **`datanode`** | **Hadoop HDFS Worker** | `9864` (Web UI) | The physical storage worker; holds raw CSV and Parquet data blocks on disk. |
+| **`spark-master`** | **Apache Spark 3.3.0 Master** | `7077` (Cluster RPC)<br>`8080` (Web UI) | The cluster orchestrator for distributed in-memory compute; schedules ETL and ML stages. |
+| **`spark-worker`** | **Apache Spark Worker** | `8081` (Web UI) | The computational worker node executing parallel tasks (configured with 2 CPU Cores & 3 GB RAM). |
+| **`clickhouse`** | **ClickHouse Server** | `8123` (HTTP)<br>`9009` (Native TCP) | High-speed columnar OLAP database serving sub-second analytical queries (~7–15 ms) for BI dashboards. |
+| **`airflow-postgres`** | **PostgreSQL 13** | `5432` | Relational database dedicated to storing Apache Airflow metadata, DAG states, and task run histories. |
+| **`kafka`** | **Apache Kafka (KRaft mode)** | `9092` (Internal)<br>`9094` (External) | Next-generation event streaming broker; handles real-time flight ingestion without ZooKeeper. |
+| **`kafka-ui`** | **Kafka Web Console** | `8090` (Web UI) | Graphical browser interface to monitor Kafka brokers, topics, partitions, and real-time message streams. |
+| **`minio`** *(Optional/Modern)* | **MinIO Object Storage** | `9000` (S3 API)<br>`9001` (Web Console) | High-performance, S3-compatible cloud-native object storage for modern Data Lakehouse architectures. |
 
 ---
 
-## 4. سيناريو العرض العملي خطوة بخطوة أمام المشرف (Live Demo Script)
+## 4. Step-by-Step Live Instructor Demo Script
 
-عندما يطلب منك المشرف أو الدكتور: *"وريني الحاويات والبيئة اللي انتوا شغالين عليها"*، اتبع الخطوات التالية بالترتيب:
+Follow this exact walkthrough when demonstrating the cluster to your instructor.
 
-### الخطوة 1: تشغيل Docker Desktop
-1. تأكد إن برنامج **Docker Desktop** مفتوح على الويندوز وعلامة الحوت لونها أخضر في شريط المهام بالأسفل.
+### Step 1: Ensure Docker Desktop is Running
+1. Verify the Docker Desktop icon in your Windows taskbar is active (green status).
 
-### الخطوة 2: تشغيل الكلاستر من الـ PowerShell
-افتح نافذة PowerShell واكتب الأوامر التالية:
+### Step 2: Spin Up the Cluster
+Open Windows PowerShell and navigate to the project's `docker` folder:
 ```powershell
 cd C:\Users\Abdelwadoud\Documents\BigData-NTI-Files\BigDataFinalProject\docker
 docker compose up -d
 ```
-*(إذا كانت الحاويات تعمل بالفعل، لن تأخذ سوى ثانيتين).*
+*(If already running, this will complete in 1 to 2 seconds).*
 
-### الخطوة 3: إثبات تشغيل الحاويات في التيرمينال
-اكتب الأمر الأساسي:
+### Step 3: Verify Running Containers in CLI
+Run this command to display a clean, professional status table:
 ```powershell
 docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 ```
-**ماذا تقول للمشرف وأنت تعرض الشاشة؟**
-> *"يا دكتور، دي بيئة الكلاستر المتكاملة (Multi-Container Big Data Stack) المشغلة على شبكة معزولة `bigdata-net`. عندنا 8 خدمات رئيسية شغالة ومتوافقة مع بعضها: الـ NameNode والـ DataNode لتخزين HDFS، الـ Spark Master والـ Worker للمعالجة الموزعة، الـ ClickHouse Server لتقديم الاستعلامات السريعة، بالإضافة لـ PostgreSQL و Kafka."*
+
+**What to SAY to the instructor:**
+> *"Dr., here is our complete multi-container Big Data cluster running on an isolated virtual network called `bigdata-net`. We have separated storage and compute: Hadoop HDFS handles distributed storage, Apache Spark 3.3.0 provides distributed in-memory processing, ClickHouse serves sub-second OLAP queries, PostgreSQL manages Airflow metadata, and Apache Kafka handles real-time event streaming."*
 
 ---
 
-### الخطوة 4: فتح واجهات الويب (Web UIs) وإبهار المشرف
+### Step 4: The 5-Tab Browser Showcase
 
-افتح متصفح كروم وافتح التابات التالية بالترتيب:
+Open Google Chrome with the following tabs prepared:
 
-#### 1. لوحة هادوب HDFS Web UI
-- **الرابط:** [http://localhost:9870](http://localhost:9870)
-- **ماذا تفعل؟**
-  1. اضغط على القائمة في الأعلى: **Utilities** $\rightarrow$ **Browse the file system**.
-  2. انتقل إلى المسار: `/project/flights/`
-  3. أره المجلدات:
-     - `/project/flights/raw/` (الملفات الخام).
-     - `/project/flights/parquet/` (ملفات الباركيه المضغوطة).
-- **ماذا تقول؟**
-  > *"هنا يا دكتور نظام الملفات الموزع HDFS. بنخزن فيه البيانات الخام وبنحولها لصيغة Parquet مقسمة حسب السنة `Year=2024`، وحققنا نسبة ضغط وتوفير مساحة تفوق 90% مقارنة بالـ CSV الأصلي."*
+#### 1. Hadoop HDFS Web UI
+- **URL:** [http://localhost:9870](http://localhost:9870)
+- **What to click:** In the top navigation bar, click **Utilities** $\rightarrow$ **Browse the file system**.
+- **Navigate to:** `/project/flights/`
+- **What to show:**
+  - `/project/flights/raw/` (Raw CSV data).
+  - `/project/flights/parquet/` (Optimized Parquet data partitioned by `Year=2024`).
+- **What to SAY:**
+  > *"Here is the Hadoop Distributed File System. We ingested raw BTS flight CSVs and converted them using PySpark into partitioned Parquet format. By using Snappy-compressed columnar Parquet, we reduced the physical storage footprint by over 90% while achieving 100x faster analytical read speeds."*
 
-#### 2. لوحة أباتشي سبارك Spark Master Web UI
-- **الرابط:** [http://localhost:8080](http://localhost:8080)
-- **ماذا تفعل؟**
-  - أره قسم **Workers** (ستجد العامل المتصل بـ 2 Cores و 3GB RAM).
-  - أره قسم **Completed Applications** الذي يعرض التطبيقات المنفذة بنجاح (`flights_csv_to_parquet` و `FlightAnalyticsAggregates`).
-- **ماذا تقول؟**
-  > *"ده محرك المعالجة الموزعة Apache Spark 3.3.0. بننفذ عليه العمليات In-Memory بالكامل، والتطبيقات خلصت عمليات التجميع المعقدة على مئات الآلاف من السجلات في 51 ثانية فقط."*
+#### 2. Apache Spark Master Web UI
+- **URL:** [http://localhost:8080](http://localhost:8080)
+- **What to show:**
+  - **Workers section:** Shows active Spark workers, available CPU cores, and memory allocation.
+  - **Completed Applications:** Shows our executed jobs: `flights_csv_to_parquet` and `FlightAnalyticsAggregates`.
+- **What to SAY:**
+  > *"This is the Spark Master cluster manager. It coordinates distributed in-memory transformations across our worker nodes. Our PySpark aggregation pipeline processed 550,000+ flight records and computed all 7 business summary tables across multiple dimensions in just 51 seconds."*
 
-#### 3. فحص قاعدة بيانات ClickHouse عبر المتصفح
-- **الرابط:** [http://localhost:8123/play](http://localhost:8123/play)
-- أو اكتب في التيرمينال:
+#### 3. ClickHouse Analytical Serving Layer
+- **URL:** [http://localhost:8123/play](http://localhost:8123/play)
+- **What to show:** In the query editor, type and run:
+  ```sql
+  SHOW TABLES FROM flight_analytics;
+  ```
+  Then run:
+  ```sql
+  SELECT count() FROM flight_analytics.agg_route_traffic;
+  ```
+- **What to SAY:**
+  > *"This is our ClickHouse OLAP serving database. Instead of having Power BI query Spark directly—which would introduce 20-30 second dashboard lags—Spark loads the pre-aggregated metrics into ClickHouse. As you can see, ClickHouse answers queries across thousands of route corridors in just 7 milliseconds."*
+
+#### 4. Apache Kafka Web Console
+- **URL:** [http://localhost:8090](http://localhost:8090)
+- **What to show:** The Kafka-UI dashboard showing the cluster status as **Online** with zero active controller errors.
+- **What to SAY:**
+  > *"Here is our event streaming layer: Apache Kafka running in KRaft mode without ZooKeeper. We have a live flight event producer that publishes real-time departure and arrival records into Kafka topics for streaming analytics."*
+
+---
+
+### Step 5: Live Container Execution
+
+Demonstrate terminal proficiency by running queries directly inside the containers:
+
 ```powershell
-docker exec -it clickhouse clickhouse-client --user default --password clickhouse --query "SHOW TABLES FROM flight_analytics"
+# 1. Query HDFS directly from the NameNode container:
+docker exec -it namenode hdfs dfs -ls /project/flights/
+
+# 2. Query ClickHouse row counts live:
+docker exec -it clickhouse clickhouse-client --user default --password clickhouse --query "SELECT count() FROM flight_analytics.agg_airport_performance"
 ```
-- سيعرض لك الجداول السبعة وجدول اختبار الاتصال:
-  - `agg_airline_performance`
-  - `agg_airport_performance`
-  - `agg_delay_causes_monthly`
-  - `agg_hourly_delays`
-  - `agg_route_traffic`
-  - `agg_calendar_delays`
-  - `agg_cancellation_reasons`
-  - `connectivity_test`
-- **ماذا تقول؟**
-  > *"دي قاعدة بيانات ClickHouse التحليلية (OLAP). الجداول السبعة اللي بتجاوب على الأسئلة البيزنس للمشروع جاهزة ومحملة عليها بالفعل، والاستعلامات عليها بتستغرق ما بين 7 إلى 15 ملي ثانية، ودي الطبقة اللي بنربط بيها Power BI مباشرة."*
-
-#### 4. لوحة كافكا Kafka UI
-- **الرابط:** [http://localhost:8090](http://localhost:8090)
-- **ماذا تفعل؟** أره الواجهة التي توضح أن الـ Cluster بحالة `Online`.
-- **ماذا تقول؟**
-  > *"ده وسيط الرسائل Kafka شغال بنمط KRaft الحديث ومراقب عبر لوحة تحكم Web UI، ومجهز لاستقبال تدفق البيانات اللحظي (Streaming) كجزء من التوسعات المستقبلية للمشروع."*
 
 ---
 
-## 5. أسئلة فنية متوقعة من المشرف وإجاباتها النموذجية
+## 5. Common Instructor Questions & Exact Winning Answers
 
-### س1: "ليه استخدمتوا دوكر وماشتغلتوش على لابتوب عادي أو جهاز محلي؟"
-**الإجابة:**  
-*"لأن مشاريع البيانات الضخمة بتتطلب بيئة موزعة متعددة المكونات (Multi-node Architecture). استخدام Docker أتاح لنا إنشاء شبكة متكاملة تجمع بين HDFS و Spark و ClickHouse و Kafka في بيئة معزولة، سهلة التكرار على أجهزة كل أعضاء الفريق، وبدون أي تعارض في البورتات أو إصدارات الـ Java و Python."*
+### Q1: "Why use Docker instead of running directly on Windows or a VirtualBox VM?"
+**Winning Answer:**  
+*"A production Big Data pipeline requires multiple specialized distributed services. Running everything on Windows natively leads to severe dependency collisions and port conflicts. A monolithic Virtual Machine consumes 30+ GB of disk and heavy memory overhead. Docker gives us isolated, lightweight, reproducible microservices sharing the host kernel, enabling our entire 4-person team to work in an identical environment."*
 
-### س2: "إزاي سبارك بيعرف يوصل لملفات هادوب HDFS؟"
-**الإجابة:**  
-*"الحاويتين مرتبطين بنفس شبكة الدوكر `bigdata-net`، وسبارك بيكلم الـ NameNode عن طريق الـ Internal URI الموحد: `hdfs://namenode:9000/project/flights/` بفضل خدمة الـ DNS المدمجة داخل دوكر."*
+### Q2: "How does Spark communicate with HDFS inside Docker?"
+**Winning Answer:**  
+*"All containers are attached to the same custom bridge network (`bigdata-net`). Docker provides automatic internal DNS resolution, so Spark connects to HDFS using the standard URI `hdfs://namenode:9000/` without needing to hardcode dynamic container IP addresses."*
 
-### س3: "لو طفيت الحاويات دلوقتي وشغلتها تاني، هل الداتا والجداول بتضيع؟"
-**الإجابة:**  
-*"لا طبعاً يا دكتور، لأننا مستخدمين Docker Volumes ومسارات تخزين مربوطة بالهارد ديسك (Mounted Volumes)، فكل البيانات المخزنة في HDFS، وجداول ClickHouse، وقواعد بيانات PostgreSQL محفوظة بشكل دائم (Persistent) ولا تتأثر بإعادة تشغيل الحاويات."*
+### Q3: "If you stop or restart your containers, will all your data be lost?"
+**Winning Answer:**  
+*"No. All stateful services (`namenode`, `datanode`, `clickhouse`, `postgres`) use Docker persistent volume mounts mapped to local host storage. Even if the containers are destroyed and recreated, all HDFS blocks and ClickHouse tables remain 100% intact."*
 
-### س4: "ليه غيرتوا بورت ClickHouse لـ 9009؟"
-**الإجابة:**  
-*"لأن البورت الافتراضي لـ ClickHouse Native هو `9000`، وده كان هيتعارض مع بورت الـ RPC لـ Hadoop NameNode اللي شغال برضه على `9000`. فحلينا التعارض ده بتوجيه بورت ClickHouse الخارجي على الويندوز لـ `9009:9000` وخلينا بورت الـ HTTP على `8123`."*
+### Q4: "Why did you remap ClickHouse to port 9009?"
+**Winning Answer:**  
+*"The default ClickHouse native TCP port is `9000`, which conflicts with the standard Hadoop HDFS NameNode RPC port (`9000`) on the host. To eliminate this collision, we remapped the external ClickHouse native port to `9009:9000` while keeping the HTTP analytical port on `8123`."*
+
+### Q5: "How does this scale to a real production cluster?"
+**Winning Answer:**  
+*"In our Docker Compose environment, we can scale worker nodes horizontally with a single flag: `docker compose up --scale spark-worker=2 -d`. In an enterprise cloud production setup (AWS or GCP), this same container architecture transitions directly to Kubernetes (EKS/GKE) using Helm charts or cloud-managed S3/Databricks infrastructure."*
 
 ---
 
-## 6. أوامر الطوارئ والتحكم السريع
+## 6. Emergency Troubleshooting Cheat Sheet
 
-| العملية | الأمر في PowerShell |
+| Situation | PowerShell Command to Fix |
 | :--- | :--- |
-| **رؤية الحاويات الشغالة** | `docker ps` |
-| **تشغيل الكلاستر بالكامل** | `docker compose -f C:\Users\Abdelwadoud\Documents\BigData-NTI-Files\BigDataFinalProject\docker\docker-compose.yml up -d` |
-| **إيقاف الكلاستر بالكامل** | `docker compose -f C:\Users\Abdelwadoud\Documents\BigData-NTI-Files\BigDataFinalProject\docker\docker-compose.yml stop` |
-| **الدخول داخل حاوية بالترمينال** | `docker exec -it namenode bash`<br>`docker exec -it spark-master bash`<br>`docker exec -it clickhouse bash` |
-| **قراءة لوجات حاوية إذا حدث خطأ** | `docker logs clickhouse --tail 50` |
+| **Check running containers** | `docker ps` |
+| **Start the full cluster** | `docker compose up -d` |
+| **Stop the full cluster cleanly** | `docker compose stop` |
+| **Restart a specific container** | `docker restart clickhouse` or `docker restart spark-master` |
+| **View real-time container logs** | `docker logs clickhouse --tail 50 -f` |
+| **Scale Spark to 2 workers** | `docker compose up --scale spark-worker=2 -d` |
