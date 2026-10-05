@@ -1,0 +1,2 @@
+# This file ensures data/raw directory is tracked by Git.
+# Raw BTS CSV files (~12.5 GB) are excluded via .gitignore.

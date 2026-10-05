@@ -1,0 +1,43 @@
+Year,Reporting_Airline,Cancellation_Code,Cancellation_Reason,Cancelled_Flights
+2024,9E,A,Carrier,11
+2024,9E,B,Weather,537
+2024,9E,C,National Aviation System (NAS),158
+2024,AA,A,Carrier,89
+2024,AA,B,Weather,1140
+2024,AA,C,National Aviation System (NAS),19
+2024,AS,A,Carrier,2940
+2024,AS,B,Weather,179
+2024,B6,A,Carrier,47
+2024,B6,B,Weather,126
+2024,B6,C,National Aviation System (NAS),161
+2024,DL,A,Carrier,101
+2024,DL,B,Weather,374
+2024,DL,C,National Aviation System (NAS),3
+2024,F9,A,Carrier,44
+2024,F9,B,Weather,267
+2024,G4,A,Carrier,62
+2024,G4,B,Weather,129
+2024,G4,C,National Aviation System (NAS),2
+2024,HA,A,Carrier,77
+2024,HA,B,Weather,19
+2024,MQ,A,Carrier,29
+2024,MQ,B,Weather,866
+2024,MQ,C,National Aviation System (NAS),37
+2024,NK,A,Carrier,13
+2024,NK,B,Weather,282
+2024,NK,C,National Aviation System (NAS),8
+2024,OH,A,Carrier,54
+2024,OH,B,Weather,878
+2024,OH,C,National Aviation System (NAS),12
+2024,OO,A,Carrier,21
+2024,OO,B,Weather,2328
+2024,OO,C,National Aviation System (NAS),35
+2024,UA,A,Carrier,3955
+2024,UA,B,Weather,743
+2024,UA,C,National Aviation System (NAS),16
+2024,WN,A,Carrier,233
+2024,WN,B,Weather,3263
+2024,WN,C,National Aviation System (NAS),70
+2024,YX,A,Carrier,60
+2024,YX,B,Weather,954
+2024,YX,C,National Aviation System (NAS),47

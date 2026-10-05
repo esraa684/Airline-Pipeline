@@ -1,0 +1,20 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Big Data raw files (Avoid pushing multi-gigabyte CSVs to GitHub)
+data/raw/*
+!data/raw/.gitkeep
+*.csv.zip
+*.tar.gz
+
+# Local OS files
+.DS_Store
+Thumbs.db
+
+# IDE and environment files
+.vscode/
+.idea/
+*.log
+.env.local

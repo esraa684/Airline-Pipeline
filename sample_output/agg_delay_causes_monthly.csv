@@ -1,0 +1,2 @@
+Year,Month,Total_Delay_Minutes,Carrier_Delay_Min,Weather_Delay_Min,NAS_Delay_Min,Security_Delay_Min,Late_Aircraft_Delay_Min,Carrier_Pct,Weather_Pct,NAS_Pct,Security_Pct,Late_Aircraft_Pct
+2024,1,9538664,3111412,979360,1709694,22616,3715582,32.62,10.27,17.92,0.24,38.95
