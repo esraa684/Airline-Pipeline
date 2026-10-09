@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Flight & Airport Analytics Platform</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+  :root{
+    --bg:#e5e9ee;      /* apron concrete */
+    --panel:#fbfcfd;
+    --ink:#161b24;
+    --text:#243042;
+    --muted:#5d6978;
+    --line:#d3dae2;
+    --board:#11151c;   /* departures board */
+    --tile:#232b38;
+    --flap:#f1efe6;
+    --signal:#f5c518;  /* taxiway yellow */
+    --blue:#2459b8;
+    --red:#d4372b;
+    --green:#1c8757;
+    --amber:#dd9208;
+    --teal:#2a8fa8;
+    --neutral:#a9b6c6;
+    --display:'Bricolage Grotesque',system-ui,sans-serif;
+    --cond:'Barlow Condensed','Arial Narrow',sans-serif;
+  }
+  *{box-sizing:border-box;margin:0}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    font-family:var(--display);font-size:15px;line-height:1.55;
+    background:var(--bg);color:var(--text);min-height:100vh;
+  }
+  :focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+  .bar :focus-visible{outline-color:var(--signal)}
+  .wrap{max-width:1160px;margin:0 auto;padding:0 24px}
+
+  /* ---------- Top bar ---------- */
+  .bar{background:var(--board);color:#fff;position:sticky;top:0;z-index:20}
+  .bar-top{display:flex;flex-wrap:wrap;gap:16px 24px;align-items:center;justify-content:space-between;padding:16px 0 10px}
+  .brand{display:flex;align-items:center;gap:14px}
+  .mark{width:42px;height:42px;border-radius:6px;background:var(--signal);color:var(--board);display:grid;place-items:center;flex:none}
+  .brand h1{font-size:19px;font-weight:800;letter-spacing:-.01em;line-height:1.15}
+  .brand p{font-size:13px;color:#9aa6b6}
+  .status{display:flex;flex-wrap:wrap;gap:8px;font-size:13px}
+  .status span{display:inline-flex;align-items:center;gap:8px;padding:5px 12px;border-radius:999px;background:#1b222d;color:#cfd7e2}
+  .status .live i{width:8px;height:8px;border-radius:50%;background:#3ddc97;box-shadow:0 0 0 0 rgba(61,220,151,.6);animation:ping 2.4s infinite}
+  @keyframes ping{70%{box-shadow:0 0 0 8px rgba(61,220,151,0)}100%{box-shadow:0 0 0 0 rgba(61,220,151,0)}}
+  .tabs{display:flex;gap:6px;overflow-x:auto;padding:4px 0 14px;scrollbar-width:none}
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{
+    flex:none;border:0;cursor:pointer;font:600 15px var(--display);color:#c3cdda;background:transparent;
+    padding:9px 18px;border-radius:6px;transition:background .15s,color .15s;
+  }
+  .tab:hover{background:#1f2733;color:#fff}
+  .tab[aria-selected="true"]{background:var(--signal);color:var(--board)}
+  .taxiway{height:4px;background:repeating-linear-gradient(90deg,var(--signal) 0 30px,transparent 30px 48px)}
+
+  /* ---------- Layout ---------- */
+  main{padding:44px 0 56px}
+  .tab-panel[hidden]{display:none}
+  .stack{display:grid;gap:22px}
+  .g2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px}
+  .g3{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:22px}
+  @media (max-width:900px){.g2,.g3{grid-template-columns:1fr}}
+
+  .hero{margin-bottom:28px;max-width:760px}
+  .hero h2{font-size:clamp(34px,5.4vw,60px);line-height:1;letter-spacing:-.03em;font-weight:800;color:var(--ink);margin-bottom:16px}
+  .hero p{font-size:17px;color:var(--text);max-width:58ch}
+
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:24px}
+  .ph{margin-bottom:18px}
+  .ph h3{font-size:21px;line-height:1.2;font-weight:700;letter-spacing:-.015em;color:var(--ink);margin-bottom:6px;max-width:30ch}
+  .ph p{font-size:14px;color:var(--muted);max-width:60ch}
+  .chart{position:relative;height:320px}
+  .chart.short{height:260px}
+  .src{margin-top:16px;padding-top:12px;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted)}
+  .src b{font-weight:600;color:var(--text)}
+
+  /* ---------- Departures board (the one bold thing) ---------- */
+  .board{background:var(--board);border-radius:8px;padding:6px 26px;color:#fff;--tw:clamp(22px,3.4vw,38px)}
+  .brow{display:grid;grid-template-columns:200px max-content 1fr;align-items:center;gap:8px 28px;padding:18px 0;border-bottom:1px solid #232b37}
+  .brow:last-child{border-bottom:0}
+  .blabel{font-family:var(--cond);font-weight:600;font-size:15px;letter-spacing:.14em;text-transform:uppercase;color:#9fabbc}
+  .tiles{display:flex;gap:3px;perspective:500px}
+  .tile{
+    position:relative;display:grid;place-items:center;overflow:hidden;
+    width:var(--tw);height:calc(var(--tw)*1.45);border-radius:3px;background:var(--tile);color:var(--flap);
+    font-family:var(--cond);font-weight:700;font-size:calc(var(--tw)*1.18);line-height:1;
+  }
+  .tile::after{content:"";position:absolute;left:0;right:0;top:50%;height:2px;margin-top:-1px;background:#090c11}
+  .tile.punct{width:calc(var(--tw)*.52)}
+  .tile .c{display:block;transform-origin:50% 100%}
+  .tile.flap .c{animation:flap .08s ease-out}
+  @keyframes flap{from{transform:rotateX(-75deg);opacity:.4}to{transform:none;opacity:1}}
+  .bstat{display:flex;align-items:center;justify-content:flex-end;gap:10px;text-align:right;font-size:14.5px;color:#dfe5ee}
+  .bstat i{flex:none;width:10px;height:10px;border-radius:50%}
+  @media (max-width:760px){
+    .board{padding:4px 18px}
+    .brow{grid-template-columns:1fr;gap:10px;padding:16px 0}
+    .bstat{justify-content:flex-start;text-align:left}
+  }
+
+  /* ---------- Legend lists ---------- */
+  .legend{list-style:none;padding:0;margin-top:18px;display:grid;gap:9px;font-size:14px}
+  .legend li{display:flex;align-items:center;gap:10px}
+  .legend i{width:12px;height:12px;border-radius:3px;flex:none}
+  .legend span{flex:1;color:var(--text)}
+  .legend b{font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums}
+
+  /* ---------- Routes table ---------- */
+  .tools{display:flex;flex-wrap:wrap;gap:12px;align-items:end;justify-content:space-between;margin-bottom:12px}
+  .search{position:relative}
+  .search input{
+    font:15px var(--display);padding:10px 14px;width:min(320px,100%);border:1px solid #b9c4d0;border-radius:6px;background:#fff;color:var(--ink);
+  }
+  .search input::placeholder{color:#8794a4}
+  .tscroll{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;min-width:640px}
+  th{font-size:13px;font-weight:600;color:var(--muted);text-align:left;padding:10px 14px;border-bottom:2px solid var(--ink);white-space:nowrap}
+  th.num,td.num{text-align:right}
+  th button{all:unset;cursor:pointer;display:inline-flex;gap:6px;align-items:center;font:inherit;color:inherit}
+  th button:hover{color:var(--ink)}
+  th button:focus-visible{outline:3px solid var(--blue);outline-offset:2px;border-radius:3px}
+  th button::after{content:"";width:0;height:0;border:4px solid transparent;border-top-color:#b3bfcc;margin-top:4px}
+  th[aria-sort="descending"] button::after{border-top-color:var(--ink)}
+  th[aria-sort="ascending"] button::after{border-top-color:transparent;border-bottom-color:var(--ink);margin-top:-4px}
+  td{padding:14px;border-bottom:1px solid var(--line);vertical-align:middle;font-variant-numeric:tabular-nums}
+  tbody tr:hover{background:#f1f4f8}
+  tbody tr.hot{background:#fff6cf}
+  .code{font-family:var(--cond);font-weight:700;font-size:25px;line-height:1;color:var(--ink);letter-spacing:.02em}
+  .code em{font-style:normal;color:#8a97a8;font-weight:500;margin:0 6px}
+  .towns{font-size:12.5px;color:var(--muted);margin-top:3px}
+  .dr{display:inline-flex;align-items:center;gap:10px;justify-content:flex-end}
+  .dr .track{width:84px;height:8px;border-radius:4px;background:#e1e7ee;overflow:hidden}
+  .dr .fill{display:block;height:100%;border-radius:4px}
+  .dr b{min-width:56px;text-align:right;font-weight:700}
+  .empty{padding:28px 14px;color:var(--muted);text-align:center}
+
+  /* ---------- Flight passes ---------- */
+  .passes{display:grid;gap:10px}
+  .pass{
+    display:grid;grid-template-columns:64px minmax(0,1fr) minmax(130px,200px) 78px;gap:6px 18px;align-items:center;
+    padding:12px 16px 12px 12px;border:1px solid var(--line);border-radius:8px;background:#fff;
+  }
+  .pass .al{height:52px;border-radius:4px;display:grid;place-items:center;background:var(--board);color:var(--flap);font-family:var(--cond);font-weight:700;font-size:28px}
+  .pass .rt{font-family:var(--cond);font-weight:700;font-size:26px;line-height:1.05;color:var(--ink);letter-spacing:.02em}
+  .pass .rt em{font-style:normal;color:#8a97a8;font-weight:500;margin:0 6px}
+  .pass .meta{font-size:13px;color:var(--muted)}
+  .meter .t{height:8px;border-radius:4px;background:#e1e7ee;overflow:hidden}
+  .meter .f{display:block;height:100%;border-radius:4px}
+  .meter .v{display:flex;justify-content:space-between;font-size:12.5px;margin-top:5px;color:var(--muted)}
+  .meter .v b{color:var(--ink);font-weight:700}
+  .badge{justify-self:end;font-size:13px;font-weight:700;padding:4px 12px;border-radius:999px}
+  .b-high{background:#fbdcd8;color:#8f1d14}
+  .b-med{background:#fde9c2;color:#7a4d00}
+  .b-low{background:#cdeedd;color:#0d5a37}
+  @media (max-width:640px){
+    .pass{grid-template-columns:56px 1fr auto}
+    .pass .meter{grid-column:1 / -1;order:5}
+  }
+
+  .note{font-size:14.5px;color:var(--text);max-width:64ch}
+  footer{padding:0 0 40px;font-size:13px;color:var(--muted)}
+
+  @media (prefers-reduced-motion:reduce){
+    .status .live i{animation:none}
+    .tile.flap .c{animation:none}
+  }
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="wrap">
+    <div class="bar-top">
+      <div class="brand">
+        <div class="mark" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M21 3 3 10.8l6.2 2.5L11.6 21l2.6-6.5 5.4 2.2L21 3Zm-4.4 4.6-5.3 4.7 1.9.8 3.4-5.5Z"/></svg>
+        </div>
+        <div>
+          <h1>Flight &amp; Airport Analytics</h1>
+          <p>NTI Big Data Specialization, 27.4M US flights from 2022 to 2025</p>
+        </div>
+      </div>
+      <div class="status">
+        <span class="live"><i></i>Serving online, 7 ms</span>
+        <span>48 months ingested</span>
+      </div>
+    </div>
+    <div class="tabs" role="tablist" aria-label="Dashboard sections">
+      <button class="tab" role="tab" id="t-exec" data-tab="tab-exec" aria-controls="tab-exec" aria-selected="true">Overview</button>
+      <button class="tab" role="tab" id="t-causes" data-tab="tab-causes" aria-controls="tab-causes" aria-selected="false" tabindex="-1">Why flights run late</button>
+      <button class="tab" role="tab" id="t-routes" data-tab="tab-routes" aria-controls="tab-routes" aria-selected="false" tabindex="-1">Busiest routes</button>
+      <button class="tab" role="tab" id="t-ml" data-tab="tab-ml" aria-controls="tab-ml" aria-selected="false" tabindex="-1">Delay predictor</button>
+    </div>
+  </div>
+  <div class="taxiway" aria-hidden="true"></div>
+</header>
+
+<main class="wrap">
+
+  <!-- ===================== OVERVIEW ===================== -->
+  <section id="tab-exec" class="tab-panel" role="tabpanel" aria-labelledby="t-exec">
+    <div class="hero">
+      <h2>About one flight in four lands late.</h2>
+      <p>This is a sample month of 547,271 flights out of the 27.4M we ingested. Most flights run fine. The ones that don't tend to pile up behind each other, and that shows in the numbers below.</p>
+    </div>
+
+    <div class="board" aria-label="Key figures for the sample month">
+      <div class="brow">
+        <div class="blabel">Flights in sample</div>
+        <div class="tiles" data-board="547,271" role="img" aria-label="547,271">547,271</div>
+        <div class="bstat"><i style="background:#8aa4cf"></i>27.4M across the full 2022 to 2025 run</div>
+      </div>
+      <div class="brow">
+        <div class="blabel">On time</div>
+        <div class="tiles" data-board="76.37%" role="img" aria-label="76.37 percent">76.37%</div>
+        <div class="bstat"><i style="background:#3ddc97"></i>418,000+ flights landed within 15 minutes of schedule</div>
+      </div>
+      <div class="brow">
+        <div class="blabel">Delayed</div>
+        <div class="tiles" data-board="23.63%" role="img" aria-label="23.63 percent">23.63%</div>
+        <div class="bstat"><i style="background:#f3b53b"></i>129,268 flights, averaging 24.8 minutes late</div>
+      </div>
+      <div class="brow">
+        <div class="blabel">Cancelled</div>
+        <div class="tiles" data-board="3.72%" role="img" aria-label="3.72 percent">3.72%</div>
+        <div class="bstat"><i style="background:#ff6b5e"></i>20,389 flights, 59.3% of them due to winter weather</div>
+      </div>
+    </div>
+
+    <div class="g2" style="margin-top:22px">
+      <div class="panel">
+        <div class="ph">
+          <h3>Delta runs the tightest schedule, American the loosest</h3>
+          <p>Share of operated flights arriving 15+ minutes late. Green beats the system average, red trails it by more than 3 points.</p>
+        </div>
+        <div class="chart"><canvas id="chartAirlines"></canvas></div>
+        <p class="src"><b>Q1</b>, from agg_airline_performance</p>
+      </div>
+      <div class="panel">
+        <div class="ph">
+          <h3>Small regional airports top the departure-delay list</h3>
+          <p>Highest departure delay rates by origin airport. At airports with few flights, a handful of late departures can move the rate a lot.</p>
+        </div>
+        <div class="chart"><canvas id="chartAirports"></canvas></div>
+        <p class="src"><b>Q2</b>, from agg_airport_performance</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== CAUSES ===================== -->
+  <section id="tab-causes" class="tab-panel" role="tabpanel" aria-labelledby="t-causes" hidden>
+    <div class="stack">
+      <div class="g3">
+        <div class="panel">
+          <div class="ph">
+            <h3>A late plane is the biggest cause of delay</h3>
+            <p>Share of all delayed minutes, by root cause.</p>
+          </div>
+          <div class="chart short"><canvas id="chartCauses"></canvas></div>
+          <ul class="legend">
+            <li><i style="background:var(--red)"></i><span>Late aircraft (the ripple effect)</span><b>38.95%</b></li>
+            <li><i style="background:var(--amber)"></i><span>Carrier operations</span><b>32.62%</b></li>
+            <li><i style="background:var(--blue)"></i><span>Air traffic control (NAS)</span><b>17.92%</b></li>
+            <li><i style="background:var(--teal)"></i><span>Extreme weather</span><b>10.27%</b></li>
+            <li><i style="background:#8793a3"></i><span>Security</span><b>0.24%</b></li>
+          </ul>
+          <p class="src"><b>Q4</b></p>
+        </div>
+        <div class="panel">
+          <div class="ph">
+            <h3>Delays build up through the day and peak around 6 PM</h3>
+            <p>Chance a flight is delayed, by scheduled departure hour. It starts at 11.4% at 6 AM and reaches 28.86% by 6 PM.</p>
+          </div>
+          <div class="chart" style="height:380px"><canvas id="chartHourly"></canvas></div>
+          <p class="src"><b>Q3</b>, from agg_hourly_delays</p>
+        </div>
+      </div>
+
+      <div class="g2">
+        <div class="panel">
+          <div class="ph">
+            <h3>Tuesday is the worst day to fly, Thursday the best</h3>
+            <p>Delay rate by day of the week. Friday is the second-roughest at 25.69%.</p>
+          </div>
+          <div class="chart short"><canvas id="chartWeekly"></canvas></div>
+          <p class="src"><b>Q5</b></p>
+        </div>
+        <div class="panel">
+          <div class="ph">
+            <h3>Weather caused six in ten cancellations</h3>
+            <p>Cancelled flights by official BTS cancellation code.</p>
+          </div>
+          <div class="chart short"><canvas id="chartCancellations"></canvas></div>
+          <p class="src"><b>Q6</b></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== ROUTES ===================== -->
+  <section id="tab-routes" class="tab-panel" role="tabpanel" aria-labelledby="t-routes" hidden>
+    <div class="panel">
+      <div class="tools">
+        <div class="ph" style="margin:0">
+          <h3 style="max-width:44ch">Direction matters: LAX to SFO runs late far more often than SFO to LAX</h3>
+          <p>The busiest directed corridors of the month. Highlighted rows are late more than 30% of the time.</p>
+        </div>
+        <div class="search">
+          <label for="routeSearch" style="display:block;font-size:13px;color:var(--muted);margin-bottom:4px">Find a route</label>
+          <input type="search" id="routeSearch" placeholder="Try LAX-SFO or Honolulu" autocomplete="off">
+        </div>
+      </div>
+      <div class="tscroll">
+        <table id="routeTable">
+          <thead>
+            <tr>
+              <th scope="col">Corridor</th>
+              <th scope="col" class="num" aria-sort="descending"><button type="button" data-key="n">Flights</button></th>
+              <th scope="col" class="num"><button type="button" data-key="mi">Distance</button></th>
+              <th scope="col" class="num"><button type="button" data-key="t">Avg air time</button></th>
+              <th scope="col" class="num"><button type="button" data-key="p">Delay rate</button></th>
+            </tr>
+          </thead>
+          <tbody id="routeBody"></tbody>
+        </table>
+      </div>
+      <p class="src"><b>Q7</b>, from the route aggregates. Click a column heading to sort.</p>
+    </div>
+  </section>
+
+  <!-- ===================== ML ===================== -->
+  <section id="tab-ml" class="tab-panel" role="tabpanel" aria-labelledby="t-ml" hidden>
+    <div class="hero">
+      <h2>Before takeoff, about one flight in six looks high risk.</h2>
+      <p>A PySpark MLlib classifier predicts whether a flight will arrive 15+ minutes late, using 8 features that are all known before departure. Nothing from after the plane leaves the gate can leak in.</p>
+    </div>
+
+    <div class="board" aria-label="Model scores">
+      <div class="brow">
+        <div class="blabel">AUC-ROC</div>
+        <div class="tiles" data-board="0.66" role="img" aria-label="0.66">0.66</div>
+        <div class="bstat"><i style="background:#8aa4cf"></i>Modest, as expected with pre-departure information only</div>
+      </div>
+      <div class="brow">
+        <div class="blabel">Accuracy</div>
+        <div class="tiles" data-board="78.4%" role="img" aria-label="78.4 percent">78.4%</div>
+        <div class="bstat"><i style="background:#8aa4cf"></i>Binary target ArrDel15, scored on a 5,000-flight test set</div>
+      </div>
+    </div>
+
+    <div class="g3" style="margin-top:22px">
+      <div class="panel">
+        <div class="ph">
+          <h3>How the 5,000 test flights were rated</h3>
+          <p>Each flight gets a delay probability, then a risk band.</p>
+        </div>
+        <div class="chart short"><canvas id="chartRisk"></canvas></div>
+        <ul class="legend">
+          <li><i style="background:var(--green)"></i><span>Low risk, under 15%</span><b>48.2% (2,410)</b></li>
+          <li><i style="background:var(--amber)"></i><span>Medium risk, 15 to 30%</span><b>36.4% (1,820)</b></li>
+          <li><i style="background:var(--red)"></i><span>High risk, 30% or more</span><b>15.4% (770)</b></li>
+        </ul>
+      </div>
+      <div class="panel">
+        <div class="ph">
+          <h3>Individual flight predictions</h3>
+          <p>A sample of what the model writes to ClickHouse for serving.</p>
+        </div>
+        <div class="passes" id="passes"></div>
+        <p class="src">Served from the <b>ml_delay_predictions</b> table</p>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="wrap">Built for the NTI Big Data Specialization. Processing in Spark, serving from ClickHouse.</footer>
+
+<script>
+(function(){
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const INK='#161b24', MUTED='#5d6978', PANEL='#fbfcfd';
+  const BLUE='#2459b8', RED='#d4372b', GREEN='#1c8757', AMBER='#dd9208', TEAL='#2a8fa8', NEUTRAL='#a9b6c6', GREY='#8793a3';
+
+  /* ---------- Chart defaults ---------- */
+  Chart.defaults.font.family = "'Bricolage Grotesque',system-ui,sans-serif";
+  Chart.defaults.font.size = 12.5;
+  Chart.defaults.color = MUTED;
+  Chart.defaults.borderColor = '#e1e6ec';
+  Chart.defaults.plugins.legend.display = false;
+  Object.assign(Chart.defaults.plugins.tooltip, {backgroundColor:INK, padding:10, cornerRadius:6, displayColors:false});
+  if (reduce) Chart.defaults.animation = false;
+
+  /* ---------- Small chart plugins ---------- */
+  const valueLabels = (fmt, horizontal) => ({
+    id:'valueLabels',
+    afterDatasetsDraw(chart){
+      const {ctx} = chart; ctx.save();
+      ctx.font = "700 12px 'Bricolage Grotesque'"; ctx.fillStyle = INK;
+      chart.getDatasetMeta(0).data.forEach((bar,i)=>{
+        const t = fmt(chart.data.datasets[0].data[i]);
+        if (horizontal){ ctx.textAlign='left'; ctx.textBaseline='middle'; ctx.fillText(t, bar.x+8, bar.y); }
+        else { ctx.textAlign='center'; ctx.textBaseline='bottom'; ctx.fillText(t, bar.x, bar.y-6); }
+      });
+      ctx.restore();
+    }
+  });
+  const avgLine = (value,label) => ({
+    id:'avgLine',
+    afterDatasetsDraw(chart){
+      const {ctx, chartArea:{top,bottom}, scales:{x}} = chart;
+      const px = x.getPixelForValue(value);
+      ctx.save();
+      ctx.setLineDash([5,4]); ctx.strokeStyle = INK; ctx.lineWidth = 1.4;
+      ctx.beginPath(); ctx.moveTo(px,top); ctx.lineTo(px,bottom); ctx.stroke();
+      ctx.setLineDash([]); ctx.fillStyle = INK; ctx.font = "700 12px 'Bricolage Grotesque'";
+      ctx.textAlign='center'; ctx.fillText(label, px, top-8);
+      ctx.restore();
+    }
+  });
+  const centerText = (big, small) => ({
+    id:'centerText',
+    afterDraw(chart){
+      const {ctx, chartArea:{left,right,top,bottom}} = chart;
+      const cx=(left+right)/2, cy=(top+bottom)/2;
+      ctx.save(); ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillStyle = INK; ctx.font = "700 34px 'Barlow Condensed'"; ctx.fillText(big, cx, cy-8);
+      ctx.fillStyle = MUTED; ctx.font = "500 12.5px 'Bricolage Grotesque'"; ctx.fillText(small, cx, cy+16);
+      ctx.restore();
+    }
+  });
+  const pointLabels = idx => ({
+    id:'pointLabels',
+    afterDatasetsDraw(chart){
+      const {ctx} = chart, meta = chart.getDatasetMeta(0);
+      ctx.save(); ctx.font = "700 13px 'Bricolage Grotesque'"; ctx.fillStyle = INK; ctx.textAlign='center';
+      idx.forEach(i=>{ const p = meta.data[i]; ctx.fillText(chart.data.datasets[0].data[i]+'%', p.x, p.y-14); });
+      ctx.restore();
+    }
+  });
+
+  /* ---------- Departures board ---------- */
+  function buildBoard(el, animate, delay){
+    const text = el.dataset.board;
+    el.textContent = '';
+    const parts = [...text].map(ch=>{
+      const isDigit = /\d/.test(ch);
+      const t = document.createElement('span'); t.className = 'tile' + (isDigit ? '' : ' punct'); t.setAttribute('aria-hidden','true');
+      const c = document.createElement('span'); c.className = 'c'; c.textContent = animate && isDigit ? '0' : ch;
+      t.appendChild(c); el.appendChild(t);
+      return {t,c,ch,isDigit};
+    });
+    if (!animate) return;
+    setTimeout(()=>{
+      parts.forEach((o,i)=>{
+        if (!o.isDigit) return;
+        let n = 0; const total = 7 + i*2;
+        const iv = setInterval(()=>{
+          n++;
+          o.c.textContent = n >= total ? o.ch : Math.floor(Math.random()*10);
+          o.t.classList.remove('flap'); void o.t.offsetWidth; o.t.classList.add('flap');
+          if (n >= total) clearInterval(iv);
+        }, 70);
+      });
+    }, delay);
+  }
+  function runBoards(panel){
+    panel.querySelectorAll('[data-board]').forEach((el,i)=>buildBoard(el, !reduce, i*350));
+  }
+
+  /* ---------- Overview charts ---------- */
+  function initExec(){
+    const avg = 23.63;
+    const airlines = [
+      ['AA American',29.37],['B6 JetBlue',29.03],['MQ Envoy',27.73],['AS Alaska',27.56],['F9 Frontier',27.16],['HA Hawaiian',26.54],
+      ['NK Spirit',25.80],['OH PSA',25.40],['OO SkyWest',24.12],['WN Southwest',23.80],['UA United',21.40],['DL Delta',19.80]
+    ];
+    new Chart(document.getElementById('chartAirlines'),{
+      type:'bar',
+      data:{labels:airlines.map(a=>a[0]),datasets:[{
+        data:airlines.map(a=>a[1]),
+        backgroundColor:airlines.map(a=>a[1]<avg?GREEN:(a[1]<avg+3?AMBER:RED)),
+        borderRadius:3, barPercentage:.72
+      }]},
+      options:{
+        indexAxis:'y', responsive:true, maintainAspectRatio:false,
+        layout:{padding:{top:22,right:6}},
+        scales:{
+          x:{min:0,max:36,ticks:{callback:v=>v+'%'},grid:{color:'#e8edf2'},border:{display:false}},
+          y:{grid:{display:false},border:{display:false},ticks:{color:INK}}
+        },
+        plugins:{tooltip:{callbacks:{label:c=>c.parsed.x+'% of operated flights delayed'}}}
+      },
+      plugins:[avgLine(avg,'System average '+avg+'%'), valueLabels(v=>v+'%',true)]
+    });
+
+    const airports = [['ELM Elmira, NY',41.33],['MBS Saginaw, MI',42.25],['BRW Utqiagvik, AK',40.91],['SPI Springfield, IL',58.33],['LSE La Crosse, WI',60.00]]
+      .sort((a,b)=>b[1]-a[1]);
+    new Chart(document.getElementById('chartAirports'),{
+      type:'bar',
+      data:{labels:airports.map(a=>a[0]),datasets:[{data:airports.map(a=>a[1]),backgroundColor:BLUE,borderRadius:3,barPercentage:.62}]},
+      options:{
+        indexAxis:'y', responsive:true, maintainAspectRatio:false,
+        layout:{padding:{top:22,right:6}},
+        scales:{
+          x:{min:0,max:72,ticks:{callback:v=>v+'%'},grid:{color:'#e8edf2'},border:{display:false}},
+          y:{grid:{display:false},border:{display:false},ticks:{color:INK}}
+        },
+        plugins:{tooltip:{callbacks:{label:c=>c.parsed.x+'% of departures delayed'}}}
+      },
+      plugins:[valueLabels(v=>v+'%',true)]
+    });
+  }
+
+  /* ---------- Cause charts ---------- */
+  function initCauses(){
+    new Chart(document.getElementById('chartCauses'),{
+      type:'doughnut',
+      data:{labels:['Late aircraft','Carrier operations','Air traffic (NAS)','Extreme weather','Security'],
+        datasets:[{data:[38.95,32.62,17.92,10.27,0.24],backgroundColor:[RED,AMBER,BLUE,TEAL,GREY],borderColor:PANEL,borderWidth:3}]},
+      options:{responsive:true,maintainAspectRatio:false,cutout:'66%',plugins:{tooltip:{callbacks:{label:c=>c.label+': '+c.parsed+'%'}}}},
+      plugins:[centerText('38.95%','late aircraft')]
+    });
+
+    const hours = ['6 AM','7 AM','8 AM','9 AM','10 AM','11 AM','12 PM','1 PM','2 PM','3 PM','4 PM','5 PM','6 PM','7 PM','8 PM','9 PM','10 PM'];
+    const hv = [11.4,13.8,16.2,18.5,20.1,21.8,23.4,24.5,25.8,26.5,27.2,27.8,28.86,28.59,28.00,26.2,23.5];
+    new Chart(document.getElementById('chartHourly'),{
+      type:'line',
+      data:{labels:hours,datasets:[{
+        data:hv, borderColor:BLUE, borderWidth:3, tension:.35, fill:true,
+        backgroundColor:ctx=>{
+          const {chart}=ctx; const a=chart.chartArea; if(!a) return null;
+          const g=chart.ctx.createLinearGradient(0,a.top,0,a.bottom);
+          g.addColorStop(0,'rgba(36,89,184,.28)'); g.addColorStop(1,'rgba(36,89,184,0)'); return g;
+        },
+        pointRadius:hv.map((_,i)=>i===12||i===0?6:0), pointHoverRadius:6,
+        pointBackgroundColor:hv.map((_,i)=>i===12?RED:BLUE), pointBorderColor:'#fff', pointBorderWidth:2
+      }]},
+      options:{
+        responsive:true, maintainAspectRatio:false, layout:{padding:{top:26,left:12,right:12}},
+        interaction:{mode:'index',intersect:false},
+        scales:{
+          y:{min:0,max:35,ticks:{callback:v=>v+'%',stepSize:5},border:{display:false}},
+          x:{grid:{display:false},ticks:{maxRotation:0,autoSkip:true,maxTicksLimit:9}}
+        },
+        plugins:{tooltip:{callbacks:{label:c=>c.parsed.y+'% chance of delay'}}}
+      },
+      plugins:[pointLabels([0,12])]
+    });
+
+    const wv=[23.63,26.88,18.60,18.35,25.69,24.07,24.62];
+    new Chart(document.getElementById('chartWeekly'),{
+      type:'bar',
+      data:{labels:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],datasets:[{
+        data:wv, borderRadius:3, barPercentage:.7,
+        backgroundColor:[NEUTRAL,RED,NEUTRAL,GREEN,AMBER,NEUTRAL,NEUTRAL]
+      }]},
+      options:{
+        responsive:true, maintainAspectRatio:false, layout:{padding:{top:20}},
+        scales:{y:{min:0,max:32,ticks:{callback:v=>v+'%'},border:{display:false}},x:{grid:{display:false}}},
+        plugins:{tooltip:{callbacks:{label:c=>c.parsed.y+'% delayed'}}}
+      },
+      plugins:[valueLabels(v=>v+'%',false)]
+    });
+
+    new Chart(document.getElementById('chartCancellations'),{
+      type:'bar',
+      data:{labels:['Weather','Carrier','Air traffic (NAS)'],datasets:[{data:[12085,7736,568],backgroundColor:[BLUE,AMBER,GREY],borderRadius:3,barPercentage:.6}]},
+      options:{
+        indexAxis:'y', responsive:true, maintainAspectRatio:false, layout:{padding:{right:6}},
+        scales:{
+          x:{min:0,max:16500,ticks:{callback:v=>v.toLocaleString('en-US')},grid:{color:'#e8edf2'},border:{display:false}},
+          y:{grid:{display:false},border:{display:false},ticks:{color:INK}}
+        },
+        plugins:{tooltip:{callbacks:{label:c=>c.parsed.x.toLocaleString('en-US')+' flights cancelled'}}}
+      },
+      plugins:[valueLabels(v=>v.toLocaleString('en-US')+' ('+(v/20389*100).toFixed(1)+'%)',true)]
+    });
+  }
+
+  /* ---------- Routes ---------- */
+  const routes = [
+    {r:'OGG-HNL',o:'OGG',on:'Kahului',d:'HNL',dn:'Honolulu',n:1001,mi:100,t:24.1,p:24.11},
+    {r:'HNL-OGG',o:'HNL',on:'Honolulu',d:'OGG',dn:'Kahului',n:994,mi:100,t:25.3,p:19.77},
+    {r:'LAX-SFO',o:'LAX',on:'Los Angeles',d:'SFO',dn:'San Francisco',n:858,mi:337,t:58.4,p:33.01},
+    {r:'SFO-LAX',o:'SFO',on:'San Francisco',d:'LAX',dn:'Los Angeles',n:857,mi:337,t:54.2,p:20.71},
+    {r:'PHX-DEN',o:'PHX',on:'Phoenix',d:'DEN',dn:'Denver',n:802,mi:602,t:92.0,p:19.13},
+    {r:'LAS-LAX',o:'LAS',on:'Las Vegas',d:'LAX',dn:'Los Angeles',n:779,mi:236,t:43.8,p:26.83}
+  ];
+  let sortKey='n', sortDir=-1, query='';
+  const body = document.getElementById('routeBody');
+  const rateColor = p => p<22 ? GREEN : (p<30 ? AMBER : RED);
+  function renderRoutes(){
+    const rows = routes
+      .filter(x=>(x.r+' '+x.on+' '+x.dn).toUpperCase().includes(query))
+      .sort((a,b)=>(a[sortKey]-b[sortKey])*sortDir);
+    body.innerHTML = rows.length ? rows.map(x=>`
+      <tr class="${x.p>30?'hot':''}">
+        <td><div class="code">${x.o}<em>to</em>${x.d}</div><div class="towns">${x.on} to ${x.dn}</div></td>
+        <td class="num"><b>${x.n.toLocaleString('en-US')}</b></td>
+        <td class="num">${x.mi} mi</td>
+        <td class="num">${x.t.toFixed(1)} min</td>
+        <td class="num"><span class="dr"><span class="track"><span class="fill" style="width:${Math.min(x.p/40*100,100)}%;background:${rateColor(x.p)}"></span></span><b style="color:${rateColor(x.p)}">${x.p.toFixed(2)}%</b></span></td>
+      </tr>`).join('')
+      : '<tr><td colspan="5" class="empty">No route matches that search. Try an airport code such as LAX.</td></tr>';
+  }
+  document.getElementById('routeSearch').addEventListener('input',e=>{query=e.target.value.trim().toUpperCase().replace(/\s+/g,' ');renderRoutes();});
+  document.querySelectorAll('#routeTable th button').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const k = btn.dataset.key;
+      sortDir = (sortKey===k) ? -sortDir : -1; sortKey = k;
+      document.querySelectorAll('#routeTable th').forEach(th=>th.removeAttribute('aria-sort'));
+      btn.parentElement.setAttribute('aria-sort', sortDir<0?'descending':'ascending');
+      renderRoutes();
+    });
+  });
+  renderRoutes();
+
+  /* ---------- Predictor ---------- */
+  const flights = [
+    {d:'2024-01-15',al:'AA',from:'JFK',to:'SFO',h:'19:00',late:1,p:38.4},
+    {d:'2024-01-15',al:'DL',from:'ATL',to:'BOS',h:'07:00',late:0,p:11.2},
+    {d:'2024-01-15',al:'B6',from:'BOS',to:'MCO',h:'17:00',late:1,p:26.8},
+    {d:'2024-01-14',al:'UA',from:'ORD',to:'DEN',h:'18:00',late:1,p:34.1},
+    {d:'2024-01-14',al:'WN',from:'PHX',to:'LAS',h:'08:00',late:0,p:12.5}
+  ];
+  document.getElementById('passes').innerHTML = flights.map(f=>{
+    const band = f.p>=30 ? ['High','b-high',RED] : (f.p>=15 ? ['Medium','b-med',AMBER] : ['Low','b-low',GREEN]);
+    return `<div class="pass">
+      <div class="al">${f.al}</div>
+      <div><div class="rt">${f.from}<em>to</em>${f.to}</div><div class="meta">${f.d}, departs ${f.h}, predicted ${f.late?'late':'on time'}</div></div>
+      <div class="meter"><div class="t"><span class="f" style="width:${Math.min(f.p/50*100,100)}%;background:${band[2]}"></span></div><div class="v"><span>Delay probability</span><b>${f.p}%</b></div></div>
+      <span class="badge ${band[1]}">${band[0]}</span>
+    </div>`;
+  }).join('');
+
+  function initMl(){
+    new Chart(document.getElementById('chartRisk'),{
+      type:'doughnut',
+      data:{labels:['Low risk','Medium risk','High risk'],datasets:[{data:[48.2,36.4,15.4],backgroundColor:[GREEN,AMBER,RED],borderColor:PANEL,borderWidth:3}]},
+      options:{responsive:true,maintainAspectRatio:false,cutout:'66%',plugins:{tooltip:{callbacks:{label:c=>c.label+': '+c.parsed+'% of flights'}}}},
+      plugins:[centerText('5,000','scored flights')]
+    });
+  }
+
+  /* ---------- Tabs ---------- */
+  const tabs = [...document.querySelectorAll('.tab')];
+  const panels = [...document.querySelectorAll('.tab-panel')];
+  const inits = {'tab-exec':()=>{runBoards(document.getElementById('tab-exec'));initExec();}, 'tab-causes':initCauses, 'tab-routes':()=>{}, 'tab-ml':()=>{runBoards(document.getElementById('tab-ml'));initMl();}};
+  const done = {};
+  function show(id, focus){
+    tabs.forEach(b=>{const on=b.dataset.tab===id; b.setAttribute('aria-selected',on); b.tabIndex=on?0:-1; if(on&&focus) b.focus();});
+    panels.forEach(p=>p.hidden = p.id!==id);
+    if(!done[id]){done[id]=true; inits[id]();}
+  }
+  tabs.forEach((b,i)=>{
+    b.addEventListener('click',()=>show(b.dataset.tab));
+    b.addEventListener('keydown',e=>{
+      let j = null;
+      if(e.key==='ArrowRight') j=(i+1)%tabs.length;
+      if(e.key==='ArrowLeft') j=(i-1+tabs.length)%tabs.length;
+      if(e.key==='Home') j=0; if(e.key==='End') j=tabs.length-1;
+      if(j!==null){e.preventDefault(); show(tabs[j].dataset.tab,true);}
+    });
+  });
+
+  // Wait for fonts so the board tiles and chart text render in the right typeface
+  const start = () => show('tab-exec');
+  (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(start);
+})();
+</script>
+</body>
+</html>
