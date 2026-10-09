@@ -22,6 +22,7 @@ volumes:
   postgres_data:
   kafka_data:
   minio_data:
+  clickhouse_data:
 
 services:
   # -------------------------------------------------------------------------
@@ -238,5 +239,25 @@ services:
       - "9001:9001"  # MinIO Web Console UI
     volumes:
       - minio_data:/data
+    networks: [bigdata-net]
+
+  # -------------------------------------------------------------------------
+  # ClickHouse (Sub-Second Analytical Serving Layer for Power BI & Dashboards)
+  # -------------------------------------------------------------------------
+  clickhouse:
+    image: clickhouse/clickhouse-server:latest
+    container_name: clickhouse
+    hostname: clickhouse
+    restart: unless-stopped
+    environment:
+      - CLICKHOUSE_DB=flight_analytics
+      - CLICKHOUSE_USER=default
+      - CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1
+      - CLICKHOUSE_PASSWORD=clickhouse
+    ports:
+      - "8123:8123"      # HTTP interface (Power BI, Python scripts, Web Play UI)
+      - "9009:9000"      # Native TCP interface (mapped to 9009 to avoid HDFS 9000 collision)
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
     networks: [bigdata-net]
 
